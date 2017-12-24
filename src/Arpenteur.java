@@ -15,25 +15,41 @@ import org.neo4j.graphdb.traversal.Traverser;
 
 import api.requestApi.sendInfoHeure;
 
-
 public class Arpenteur {
 
 	/** The db. */
 	private static GraphDatabaseService db;
 
-	final static File path = new File(Chemin.graphFichier + Chemin.fichier);
-
+	File path = new File(Chemin.graphFichier + Chemin.fichier);
+	File[] pathList;
+	ArrayList<String> pathStringList;
+	boolean parListe = false;
+	boolean parListeString = false;
+	String fichierCourant;
+	int n = 0;
+	int m = 0;
 	/** The tx. */
 	@SuppressWarnings("unused")
 	private static Transaction tx = null;
 
 	public Arpenteur() {
-		GraphDatabaseFactory dbFactory = new GraphDatabaseFactory();
-		db = dbFactory.newEmbeddedDatabase(path);
+
 	}
 
+	public Arpenteur(File[] list) {
+		pathList = list;
+		parListe = true;
 
-	
+	}
+
+	public Arpenteur(ArrayList<String> l, int n, int m) {
+		pathStringList = l;
+		parListeString = true;
+		this.n = n;
+		this.m = m;
+
+	}
+
 	public int getEtudiantPresentDansNoeud(Map<String, Object> map) {
 		return Integer.parseInt((String) map.get("EtudiantPresent"));
 	}
@@ -57,12 +73,45 @@ public class Arpenteur {
 		return (String) map.get("Heure_fin");
 	}
 
-	public  void  searchInData() {
+	public void run(boolean envoieToApi) {
+		if (parListe) {
+			for (File f : pathList) {
+				fichierCourant = f.getName() + ".ics";
+				path.setWritable(true);
+				System.out.println("write possible ?: " + path.canWrite());
+				GraphDatabaseFactory dbFactory = new GraphDatabaseFactory();
+				db = dbFactory.newEmbeddedDatabase(f);
+				searchInData(envoieToApi);
+				System.gc();
+
+			}
+
+		} else if (parListeString) {
+			for (int i = n; i < m; i++) {
+				File path = new File(pathStringList.get(i));
+				fichierCourant = path.getName() + ".ics";
+				path.canWrite();
+				GraphDatabaseFactory dbFactory = new GraphDatabaseFactory();
+				db = dbFactory.newEmbeddedDatabase(path);
+				searchInData(envoieToApi);
+				System.gc();
+			}
+		} else {
+		}
+		fichierCourant = path.getName() + ".ics";
+		GraphDatabaseFactory dbFactory = new GraphDatabaseFactory();
+		db = dbFactory.newEmbeddedDatabase(path);
+		searchInData(envoieToApi);
+
+	}
+
+	public void searchInData(boolean envoieToApi) {
+
 		try (Transaction tx = db.beginTx()) {
 			ArrayList<Noeud> listeNoeud = new ArrayList<Noeud>();
 
 			String requeteAPI = "[";
-			System.out.println("chemin = " + Chemin.graphFichier);
+			// System.out.println("chemin = " + Chemin.graphFichier);
 			// On récupère le noeud correspondant a la promotion rehercher
 			ResourceIterator<Node> listesDesNoeudsDates = db.findNodes(TypeEvenement.DATE);
 			while (listesDesNoeudsDates.hasNext()) {
@@ -73,19 +122,19 @@ public class Arpenteur {
 				for (Relationship relationFluxEntrant : noeudDate.getRelationships(Relation.CONTIENT,
 						Direction.OUTGOING)) {
 					Node noeudEntrant = relationFluxEntrant.getOtherNode(noeudDate);
-					Map<String, Object>   typeRecuperer = noeudEntrant.getAllProperties();
+					Map<String, Object> typeRecuperer = noeudEntrant.getAllProperties();
 					Long idNoeud = noeudEntrant.getId();
 					String type = getType(typeRecuperer);
 					String heureDebut = getHeureDebut(typeRecuperer);
 					String heureFin = getHeureFin(typeRecuperer);
 					String localisation = getLocalisation(typeRecuperer);
-					int nombreEtudiant  = getEtudiantPresentDansNoeud(typeRecuperer);
-					Noeud noeudCourant = new Noeud(idNoeud,type,date,heureDebut,heureFin,"1",localisation,nombreEtudiant,Chemin.fichier);
+					int nombreEtudiant = getEtudiantPresentDansNoeud(typeRecuperer);
+					Noeud noeudCourant = new Noeud(idNoeud, type, date, heureDebut, heureFin, "1", localisation,
+							nombreEtudiant, fichierCourant);
 					listeNoeud.add(noeudCourant);
 
-
 				}
-				//Pour chaque noeud adjacent au noeud de dat
+				// Pour chaque noeud adjacent au noeud de dat
 				for (Relationship fluxEntrant : noeudDate.getRelationships(Relation.CONTIENT, Direction.OUTGOING)) {
 
 					Node nEntrant = fluxEntrant.getOtherNode(noeudDate);
@@ -93,44 +142,45 @@ public class Arpenteur {
 					 * On récupère les labels du noeud
 					 */
 
-				
 					TraversalDescription pathDescriptor = db.traversalDescription().breadthFirst()
 							.relationships(Relation.CONTIENT, Direction.OUTGOING)
 							.evaluator(Evaluators.excludeStartPosition());
 					Traverser traverser = pathDescriptor.traverse(nEntrant);
 					for (Node cours : traverser.nodes()) {
-						Map<String, Object>   typeRecuperer = cours.getAllProperties();
+						Map<String, Object> typeRecuperer = cours.getAllProperties();
 						Long idNoeud = cours.getId();
 
-						if(!Noeud.existInList(idNoeud,listeNoeud))
-						{
-							
-						
-						String heureDebut = getHeureDebut(typeRecuperer);
-						String heureFin = getHeureDebut(typeRecuperer);
-						String type = getType(typeRecuperer);
-						String localisation = getLocalisation(typeRecuperer);
-						int nombreEtudiant  = getEtudiantPresentDansNoeud(typeRecuperer);
+						if (!Noeud.existInList(idNoeud, listeNoeud)) {
 
-						Noeud noeudCourant = new Noeud(idNoeud,type,date,heureDebut,heureFin,"0",localisation,nombreEtudiant,Chemin.fichier);
-						listeNoeud.add(noeudCourant);
+							String heureDebut = getHeureDebut(typeRecuperer);
+							String heureFin = getHeureDebut(typeRecuperer);
+							String type = getType(typeRecuperer);
+							String localisation = getLocalisation(typeRecuperer);
+							int nombreEtudiant = getEtudiantPresentDansNoeud(typeRecuperer);
+
+							Noeud noeudCourant = new Noeud(idNoeud, type, date, heureDebut, heureFin, "0", localisation,
+									nombreEtudiant, fichierCourant);
+							listeNoeud.add(noeudCourant);
 						}
 					}
-					}
-				
-				for(Noeud n :listeNoeud ) {
-					requeteAPI += n.toJSON() +  ",";
+				}
+
+				for (Noeud n : listeNoeud) {
+					requeteAPI += n.toJSON() + ",";
+
 				}
 				listeNoeud.clear();
-				
+
 			}
-			
-			requeteAPI = requeteAPI.substring(0, requeteAPI.length() -1)+ "]";
-			System.out.println("JSON : " +requeteAPI);
+
+			requeteAPI = requeteAPI.substring(0, requeteAPI.length() - 1) + "]";
+			System.out.println("JSON : " + requeteAPI);
 			tx.success();
-			//ON envoie le tout via l'API
-			sendInfoHeure.sendFluxToApi(requeteAPI, true);
+			tx.close();
+			// ON envoie le tout via l'API
+			if (envoieToApi)
+				sendInfoHeure.sendFluxToApi(requeteAPI, true);
 		}
-		
+
 	}
 }

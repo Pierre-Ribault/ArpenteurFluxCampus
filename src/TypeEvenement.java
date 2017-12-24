@@ -69,7 +69,7 @@ TypeEvenement(String n)
 			TypeEvenement typeProjet = TypeEvenement.PROJET;
 			return typeProjet;
 		}
-		else if(type.equals("Mise a Niveau"))
+		else if(type.equals("MiseaNiveau"))
 		{
 			TypeEvenement typeMAN = TypeEvenement.MAJ;
 			return typeMAN;

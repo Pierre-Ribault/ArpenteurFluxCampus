@@ -27,7 +27,7 @@ public class Noeud {
 		this.localisation= localisation;
 		this.nombreEtudiant = nombreEtudiant;
 		this.fichier = fichier;
-		this.mdp = MotDePasseBDD.mdp;
+		this.mdp = MotdePasseBDD.mdp;
 	}
 	public long getId() {
 		return id;
