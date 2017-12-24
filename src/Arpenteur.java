@@ -153,7 +153,7 @@ public class Arpenteur {
 						if (!Noeud.existInList(idNoeud, listeNoeud)) {
 
 							String heureDebut = getHeureDebut(typeRecuperer);
-							String heureFin = getHeureDebut(typeRecuperer);
+							String heureFin = getHeureFin(typeRecuperer);
 							String type = getType(typeRecuperer);
 							String localisation = getLocalisation(typeRecuperer);
 							int nombreEtudiant = getEtudiantPresentDansNoeud(typeRecuperer);
